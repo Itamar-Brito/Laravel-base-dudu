@@ -1,0 +1,50 @@
+version: "3.8"
+services:
+  php:
+    build: ./.docker/php
+    container_name: dudu-php
+    entrypoint: ./.docker/entrypoint.sh
+    environment:
+      - COMPOSER_MEMORY_LIMIT=2G
+      - CHOKIDAR_USEPOLLING=true
+    volumes:
+      - .:/var/www:cached
+    networks:
+      - dudu-network
+    depends_on:
+      - db
+  web:
+    build: ./.docker/nginx
+    container_name: dudu-web
+    tty: true
+    ports:
+      - "9000:80"
+    volumes:
+      - .:/var/www:cached
+    networks:
+      - dudu-network
+    depends_on:
+      - php
+      - db
+  db:
+    build: .docker/mysql
+    command: --innodb-use-native-aio=0 --default-authentication-plugin=mysql_native_password
+    container_name: dudu-db
+    tty: true
+    ports:
+      - "3307:3306"
+    volumes:
+      - dbdududata:/var/lib/mysql
+      - ./.docker/mysql/scripts:/docker-entrypoint-initdb.d
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+    networks:
+      - dudu-network
+
+networks:
+  dudu-network:
+    driver: bridge
+
+volumes:
+  dbdududata:
+    driver: local
